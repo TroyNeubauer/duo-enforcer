@@ -1,34 +1,31 @@
+use chrono::{Datelike, Local, NaiveDateTime, Utc};
+use leptos::*;
+use serde::{Deserialize, Serialize};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+    thread,
+    time::Duration,
+};
+use ureq::Agent;
 
+// ------------------------------
+// 4) Main — Launch Leptos SSR
+// ------------------------------
 #[cfg(feature = "ssr")]
 #[tokio::main]
-async fn main() {
-    use axum::Router;
-    use leptos::logging::log;
-    use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
-    use duo_enforcer::app::*;
+async fn main() -> std::io::Result<()> {
+    let (tx, rx) = crossbeam_channel::bounded(4);
+    spawn_actor_thread(rx);
 
-    let conf = get_configuration(None).unwrap();
-    let addr = conf.leptos_options.site_addr;
-    let leptos_options = conf.leptos_options;
-    // Generate the list of routes in your Leptos App
-    let routes = generate_route_list(App);
+    let conf = leptos::config::get_configuration(None).unwrap_or_default();
 
-    let app = Router::new()
-        .leptos_routes(&leptos_options, routes, {
-            let leptos_options = leptos_options.clone();
-            move || shell(leptos_options.clone())
-        })
-        .fallback(leptos_axum::file_and_error_handler(shell))
-        .with_state(leptos_options);
-
-    // run our app with hyper
-    // `axum::Server` is a re-export of `hyper::Server`
-    log!("listening on http://{}", &addr);
-    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app.into_make_service())
+    let opts = LeptosOptions::from_config(&conf);
+    SimpleServer::new(move |cx| view! { cx, <App/> })
+        .with_options(opts)
+        .start()
         .await
-        .unwrap();
 }
 
 #[cfg(not(feature = "ssr"))]
