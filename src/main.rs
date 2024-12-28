@@ -1,36 +1,26 @@
-use chrono::{Datelike, Local, NaiveDateTime, Utc};
-use leptos::*;
-use serde::{Deserialize, Serialize};
-use std::{
-    fs,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
-use ureq::Agent;
+use axum::Router;
+use leptos::{config::get_configuration, logging};
+use leptos_axum::{generate_route_list, LeptosRoutes};
+// use server_fns_axum::*;
 
-// ------------------------------
-// 4) Main — Launch Leptos SSR
-// ------------------------------
 #[cfg(feature = "ssr")]
 #[tokio::main]
-async fn main() -> std::io::Result<()> {
-    let (tx, rx) = crossbeam_channel::bounded(4);
-    spawn_actor_thread(rx);
+async fn main() -> anyhow::Result<()> {
+    // Setting this to None means we'll be using cargo-leptos and its env vars
+    let conf = get_configuration(None).unwrap();
+    let leptos_options = conf.leptos_options;
+    let addr = leptos_options.site_addr;
+    let routes = generate_route_list(duo_enforcer::ui::App);
 
-    let conf = leptos::config::get_configuration(None).unwrap_or_default();
+    let app = Router::new()
+        .leptos_routes(&leptos_options, routes, {
+            let leptos_options = leptos_options.clone();
+            move || duo_enforcer::ui::shell(leptos_options.clone())
+        })
+        .fallback(leptos_axum::file_and_error_handler(duo_enforcer::ui::shell))
+        .with_state(leptos_options);
 
-    let opts = LeptosOptions::from_config(&conf);
-    SimpleServer::new(move |cx| view! { cx, <App/> })
-        .with_options(opts)
-        .start()
-        .await
-}
-
-#[cfg(not(feature = "ssr"))]
-pub fn main() {
-    // no client-side main function
-    // unless we want this to work with e.g., Trunk for pure client-side testing
-    // see lib.rs for hydration function instead
+    let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
+    logging::log!("listening on http://{}", &addr);
+    Ok(axum::serve(listener, app.into_make_service()).await?)
 }

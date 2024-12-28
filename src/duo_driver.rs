@@ -23,7 +23,7 @@ pub(crate) static SHARED_STATE: LazyLock<Arc<Mutex<SharedState>>> =
 pub(crate) static CMD_TX: OnceLock<crossbeam_channel::Sender<ActorCommand>> = OnceLock::new();
 
 // The actor thread: polls Duolingo every 5 minutes or on command
-fn spawn_actor_thread(rx: Receiver<ActorCommand>) {
+pub fn spawn_actor_thread(rx: Receiver<ActorCommand>) {
     // read initial JWT from env
     let initial_jwt = std::env::var("DUO_JWT").unwrap_or_else(|_| "".to_string());
     let xp_req = 50; // daily XP requirement

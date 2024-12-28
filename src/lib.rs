@@ -1,9 +1,11 @@
 #[cfg(feature = "ssr")]
 mod duo_driver;
 #[cfg(feature = "ssr")]
+pub use duo_driver::*;
+#[cfg(feature = "ssr")]
 mod duolingo;
 
-mod ui;
+pub mod ui;
 
 use serde::{Deserialize, Serialize};
 
@@ -49,7 +51,7 @@ impl Default for SharedState {
 }
 
 // The actor commands. No separate events; actor updates SharedState directly.
-enum ActorCommand {
+pub enum ActorCommand {
     UpdateJWT(String),
     ForcePoll,
     Shutdown,
