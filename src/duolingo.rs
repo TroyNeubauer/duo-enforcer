@@ -1,6 +1,6 @@
 use anyhow::{anyhow, bail, Context, Result};
-use chrono::{Local, NaiveDateTime, Utc};
-use log::debug;
+use chrono::{Local, NaiveTime};
+use log::{debug, error};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -131,38 +131,34 @@ impl DuolingoApi {
             #[serde(rename = "xpGains")]
             xp_gains: Vec<Lesson>,
             #[serde(rename = "streakData")]
+            #[allow(dead_code)]
             streak_data: StreakData,
         }
         #[derive(Debug, Deserialize)]
         struct StreakData {
             #[serde(rename = "updatedTimestamp")]
+            #[allow(dead_code)]
             updated_timestamp: i64,
         }
 
         let daily: RespData = resp.json().await?;
+        debug!("Read xp data: {daily:?}");
 
-        // The "reported_midnight"
-        let reported_midnight =
-            NaiveDateTime::from_timestamp_opt(daily.streak_data.updated_timestamp, 0)
-                .unwrap_or_else(|| Utc::now().naive_utc());
-
-        // local midnight
-        let today = Local::now().date_naive();
-        let midnight = today
-            .and_hms_opt(0, 0, 0)
-            .unwrap_or_else(|| Utc::now().naive_utc());
-        let time_discrepancy = midnight - reported_midnight;
-        let adjusted_midnight = if time_discrepancy < chrono::Duration::zero() {
-            reported_midnight
-        } else {
-            reported_midnight + time_discrepancy
+        // local midnight expressed as unix time
+        let midnight = match Local::now().with_time(NaiveTime::from_hms_opt(0, 0, 0).unwrap()) {
+            chrono::offset::LocalResult::Single(t) => t.timestamp(),
+            chrono::offset::LocalResult::Ambiguous(earliest, _) => earliest.timestamp(),
+            chrono::offset::LocalResult::None => {
+                error!("No midnight today. Looking in past 24 hours instead");
+                Local::now().timestamp() - 60 * 60 * 24
+            }
         };
-        let cutoff_ts = adjusted_midnight.timestamp();
+        debug!("Using last midnight timestamp: {midnight}");
 
         let lessons_today: Vec<Lesson> = daily
             .xp_gains
             .into_iter()
-            .filter(|l| l.time > cutoff_ts)
+            .filter(|l| l.time > midnight)
             .collect();
         let xp_today = lessons_today.iter().map(|l| l.xp).sum();
 

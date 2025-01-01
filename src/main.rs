@@ -33,7 +33,7 @@ struct UpdateJwtBody {
 
 const DAILY_XP_GOAL: u32 = 100;
 
-const PERSISTENT_JWT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+static PERSISTENT_JWT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
     let mut home = dirs::home_dir().expect("Failed to get home directory");
     home.push(".duo_jwt_token");
     home
@@ -44,7 +44,7 @@ mod enforcer {
 
     use super::*;
 
-    const IS_FINISHED_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    static IS_FINISHED_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
         let mut home = dirs::home_dir().expect("Failed to get home directory");
         home.push(".duo_done");
         home
