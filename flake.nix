@@ -23,20 +23,27 @@
         rust-pkgs = pkgs.rust-bin.stable.latest.default.override {
           extensions = [ "rust-analyzer" "rust-src" ];
         };
+        duo-enforcer = import ./package.nix {
+          inherit (pkgs) lib darwin stdenv rustPlatform pkg-config openssl;
+        };
       in {
         devShells = rec {
           default = pkgs.mkShell {
             CARGO_NET_GIT_FETCH_WITH_CLI = "true";
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [ pkgs.openssl ];
 
             packages = with pkgs; [
-              rust-pkgs
-            ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (
-              with pkgs.darwin.apple_sdk.frameworks; [
-                Foundation
-                SystemConfiguration
-            ]);
+              pkg-config
+              openssl
+            ] ++ lib.optionals stdenv.isDarwin [
+              darwin.apple_sdk.frameworks.Foundation
+              darwin.apple_sdk.frameworks.SystemConfiguration
+            ];
           };
+        };
+
+        packages = {
+          inherit duo-enforcer;
         };
       });
 }
-

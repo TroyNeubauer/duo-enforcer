@@ -33,10 +33,20 @@ struct UpdateJwtBody {
 
 const DAILY_XP_GOAL: u32 = 100;
 
+static ROOT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
+    let mut dir = dirs::home_dir().expect("Failed to get home directory");
+    dir.push(".duo-enforcer");
+    if !dir.exists() {
+        info!("Creating path {dir:?}");
+        let _ = std::fs::create_dir_all(&dir);
+    }
+    dir
+});
+
 static PERSISTENT_JWT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-    let mut home = dirs::home_dir().expect("Failed to get home directory");
-    home.push(".duo_jwt_token");
-    home
+    let mut dir = PathBuf::from(&*ROOT_STORAGE_PATH);
+    dir.push("jwt_token");
+    dir
 });
 
 mod enforcer {
@@ -45,9 +55,9 @@ mod enforcer {
     use super::*;
 
     static IS_FINISHED_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-        let mut home = dirs::home_dir().expect("Failed to get home directory");
-        home.push(".duo_done");
-        home
+        let mut dir = PathBuf::from(&*ROOT_STORAGE_PATH);
+        dir.push("complete");
+        dir
     });
 
     pub fn is_disarmed() -> bool {
