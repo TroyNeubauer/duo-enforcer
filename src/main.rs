@@ -51,8 +51,6 @@ static PERSISTENT_JWT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
 
 mod enforcer {
     use std::io::ErrorKind;
-    use std::path::Path;
-
     use super::*;
 
     const IS_FINISHED_PATH: &str = "/tmp/.computer_unblocked";
