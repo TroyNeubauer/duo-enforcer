@@ -51,21 +51,18 @@ static PERSISTENT_JWT_STORAGE_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
 
 mod enforcer {
     use std::io::ErrorKind;
+    use std::path::Path;
 
     use super::*;
 
-    static IS_FINISHED_PATH: LazyLock<PathBuf> = LazyLock::new(|| {
-        let mut dir = PathBuf::from(&*ROOT_STORAGE_PATH);
-        dir.push("complete");
-        dir
-    });
+    const IS_FINISHED_PATH: &str = "/tmp/.computer_unblocked";
 
     pub fn is_disarmed() -> bool {
-        std::fs::exists(&*IS_FINISHED_PATH).unwrap_or(false)
+        std::fs::exists(IS_FINISHED_PATH).unwrap_or(false)
     }
 
     pub fn block_all() {
-        let path = &*IS_FINISHED_PATH;
+        let path = IS_FINISHED_PATH;
         if is_disarmed() {
             info!("Block enabled. Removing path {path:?}");
         }
@@ -77,7 +74,7 @@ mod enforcer {
     }
 
     pub fn disarm() {
-        let path = &*IS_FINISHED_PATH;
+        let path = IS_FINISHED_PATH;
         if !is_disarmed() {
             info!("Block disabled. Creating path {path:?}");
         }
