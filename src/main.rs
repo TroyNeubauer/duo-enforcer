@@ -263,13 +263,14 @@ async fn update_jwt(
     Json(payload): Json<UpdateJwtBody>,
 ) -> Result<(), (StatusCode, String)> {
     let mut duo = app.duo.lock().await;
-    duo.update_jwt(&payload.new_jwt)
+
+    let jwt = payload.new_jwt.trim_matches(|c| c == '"');
+    dbg!(jwt);
+    duo.update_jwt(jwt)
         .await
         .context("Failed to update JWT")
         .map_err(internal_error)?;
 
-    let jwt = payload.new_jwt.trim_matches(|c| c == '"');
-    dbg!(jwt);
     if let Err(e) = tokio::fs::write(&*PERSISTENT_JWT_STORAGE_PATH, jwt).await {
         warn!("Failed to save new JWT token: {e:?}");
     }
