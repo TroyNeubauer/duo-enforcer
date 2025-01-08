@@ -271,8 +271,14 @@ async fn update_jwt(
         .context("Failed to update JWT")
         .map_err(internal_error)?;
 
-    if let Err(e) = tokio::fs::write(&*PERSISTENT_JWT_STORAGE_PATH, jwt).await {
-        warn!("Failed to save new JWT token: {e:?}");
+    let path = &*PERSISTENT_JWT_STORAGE_PATH;
+    match tokio::fs::write(path, jwt).await {
+        Err(e) => {
+            warn!("Failed to save new JWT token to {path:?}: {e:?}");
+        }
+        Ok(()) => {
+            info!("Saved jwt token to {path:?}");
+        }
     }
 
     Ok(())
